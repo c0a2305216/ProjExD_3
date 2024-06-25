@@ -3,6 +3,7 @@ import random
 import sys
 import time
 import pygame as pg
+import math
 
 
 WIDTH = 1100  # ゲームウィンドウの幅
@@ -56,6 +57,7 @@ class Bird:
         self.img = __class__.imgs[(+5, 0)]
         self.rct: pg.Rect = self.img.get_rect()
         self.rct.center = xy
+        self.dire = (+5, 0)
 
     def change_img(self, num: int, screen: pg.Surface):
         """
@@ -82,6 +84,7 @@ class Bird:
             self.rct.move_ip(-sum_mv[0], -sum_mv[1])
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.img = __class__.imgs[tuple(sum_mv)]
+            self.dire = sum_mv
         screen.blit(self.img, self.rct)
 
 
@@ -95,10 +98,12 @@ class Beam:
         引数 bird：ビームを放つこうかとん（Birdインスタンス）
         """
         self.img = pg.image.load(f"fig/beam.png")
+        self.vx, self.vy = bird.dire
         self.rct = self.img.get_rect()
-        self.rct.centery = bird.rct.centery
-        self.rct.left = bird.rct.right  # ビームの左座標をこうかとんの右座標に設定
-        self.vx, self.vy = +5, 0
+        self.rct.centerx = bird.rct.centerx + bird.rct.width * self.vx/5  # ビームの横座標
+        self.rct.centery = bird.rct.centery + bird.rct.height * self.vy/5  # ビームの縦座標
+        self.theta = math.degrees(math.atan2(-self.vy, self.vx))  # ビームの角度の計算
+        self.img = pg.transform.rotozoom(self.img, self.theta, 1)  # ビームの画像を回転
 
     def update(self, screen: pg.Surface):
         """
@@ -147,12 +152,12 @@ class Score:
     """
 
     def __init__(self) -> None:
-        self.fonto = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
-        self.txt_color = (0, 0, 255)
-        self.sc = 0
-        self.img = self.fonto.render(f"スコア：{self.sc}", 0, self.txt_color)
+        self.fonto = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)  # フォントの設定
+        self.txt_color = (0, 0, 255)  # 文字色の設定
+        self.sc = 0  # スコアの初期値の設定
+        self.img = self.fonto.render(f"スコア：{self.sc}", 0, self.txt_color)  # 文字列Surfaceの生成
         self.rct = self.img.get_rect()
-        self.rct.center = (100, HEIGHT - 50)
+        self.rct.center = (100, HEIGHT - 50)  # 文字列の中心座標
 
     def update(self, screen: pg.Surface):
         self.img = self.fonto.render(f"スコア：{self.sc}", 0, self.txt_color)
@@ -180,7 +185,7 @@ def main():
                 beam = Beam(bird)            
         screen.blit(bg_img, [0, 0])
         
-        for bomb in bombs_lst:
+        for bomb in bombs_lst:  # こうかとんが爆弾に当たった時の判定
             if bird.rct.colliderect(bomb.rct):
                 # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
                 # bird.change_img(8, screen)
@@ -191,7 +196,7 @@ def main():
                 time.sleep(5)
                 return
         
-        for i in range(len(bombs_lst)):
+        for i in range(len(bombs_lst)):  # ビームが爆弾に当たった時の判定
             if beam is not None:
                 if bombs_lst[i].rct.colliderect(beam.rct):
                     bombs_lst[i] = None
